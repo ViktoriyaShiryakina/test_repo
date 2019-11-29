@@ -140,6 +140,10 @@ DELIMITER ';' CSV HEADER;
 \copy public.quotes_task  FROM 'C:\Users\USER\Desktop\IT для финансистов\ДЗ №1\Data\Облигации\quotes_task.csv' 
 DELIMITER ';' CSV HEADER;
 --Замечание: в процессе импорта данных будет неоднократно требоваться поменять форматы определенных столбцов в csv-файле.
+
+-- Комментарий: 
+-- А какой именно был порядок изменения формата столбцов. Не зная этого, мне сложно воспроизвести импорт данных, будут ошибки из-за несоответствия импортируемых данных форматам полей.
+
 --Удаление лишних столбцов из таблицы public.bond_description_task (тех, которые были скрыты в изначальном файле excel):
 ALTER TABLE public.bond_description_task
 DROP COLUMN "ISLOMBARDCBR_NRD", 
@@ -218,11 +222,15 @@ ALTER TABLE exchange ADD PRIMARY KEY ("exchange_order");
 ALTER TABLE public.listing_task
 ADD CONSTRAINT fr_key_1 FOREIGN KEY ("exchange_order") REFERENCES public.exchange ("exchange_order");
 
+-- Комментарий:
+-- Эмм... А как же связь между quotes и listing? 
+
 --К ЗАДАНИЮ 4 (написано только начало кода)
 select "ISIN", count ("TIME") as day_missed
 from quotes_task
 where "BOARDNAME"='ЦК - Режим основных торгов' and "ASK"=0
 group by "ISIN";
 
-
+-- Комментарий:
+-- Нужно дописывать. :)
 
