@@ -212,6 +212,7 @@ from quotes_task)
 --заполнение полей с кодами-ссылками на новую таблицу exchange
 update listing_task
 set("BOARDID","BOARDNAME")=(SELECT "BOARDID","BOARDNAME"
+<<<<<<< Updated upstream
 									 from exchange
 									 where listing_task."ID"=exchange."ID");
 --К ЗАДАНИЮ 3.
@@ -233,4 +234,62 @@ group by "ISIN";
 
 -- Комментарий:
 -- Нужно дописывать. :)
+=======
+									 from board_info
+									 where listing."ID"=board_info."ID");
+									 
+--ЗАДАНИЕ 3.
+--Чтобы связать таблицы quotes и listing через внешний ключ, нужно сначала внести в поле ID таблицы listing,которое является для нее первичным ключом,
+-- недостающие значения из таблицы quotes:
+--НО! Предварительно снимаем требование null с полей ISIN,PLATFORM и SECTION в таблице listing:
+insert into listing ("ID", "ISIN", "BOARDID", "BOARDNAME")
+select distinct quotes."ID", quotes."ISIN", quotes."BOARDID", quotes."BOARDNAME"
+from quotes left join listing on quotes."ID"=listing."ID"
+where listing."ID" is null;
+
+--Затем присваиваем внешний ключ:
+ALTER TABLE quotes
+ADD CONSTRAINT fr_key_1 FOREIGN KEY ("ID") REFERENCES listing ("ID");
+
+-- Теперь, для того, чтобы связать таблицы listing и bond_description, нужно в таблице bond_description создать поле ID (по этому полю будем связывать эти таблицы):
+alter table bond_description
+add column "ID" integer;
+
+-- Импортируем в это поле значения ID из таблицы listing:
+UPDATE bond_description
+SET "ID"=listing."ID"
+FROM listing
+WHERE bond_description."ISIN, REGCODE, NRDCODE"=listing."ISIN";
+
+-- Присваиваем внешний ключ для таблицы bond_description:
+ALTER TABLE bond_description
+ADD CONSTRAINT fr_key_1 FOREIGN KEY ("ID") REFERENCES listing ("ID");
+
+
+--ЗАДАНИЕ 4 
+with quotes_1 as (
+-- считаем, сколько всего было наблюдений за бумагами, удовлетворяющих условию торговли на МБ в режиме основных торгов 
+	select listing."ISIN", listing."ISSUER_NAME", count (quotes."TIME") as gen_obs
+	from quotes inner join listing
+	on listing."ID"=quotes."ID"
+	where listing."SECTION"=' Основной' and listing."PLATFORM"='Московская Биржа '
+	group by listing."ISIN", listing."ISSUER_NAME"
+), quotes_2 as (
+--считаем кол-во дней, когда котировка ASK не существовала или была бы равна 0 среди тех облигаций, которые торгуются на МБ в режиме основных торгов
+	select listing."ISIN", listing."ISSUER_NAME", count (quotes."TIME") as day_missed
+	from quotes inner join listing
+	on listing."ID"=quotes."ID"
+	where listing."SECTION"=' Основной' and listing."PLATFORM"='Московская Биржа '
+	and (quotes."ASK" is not null and quotes."ASK">0)
+	group by listing."ISIN", listing."ISSUER_NAME")
+select quotes_2."ISIN",
+quotes_2."ISSUER_NAME",
+(quotes_2.day_missed::real / quotes_1.gen_obs::real) as nun_ratio
+from quotes_1 inner join quotes_2 
+on quotes_1."ISIN"=quotes_2."ISIN"
+where (quotes_2.day_missed::real / quotes_1.gen_obs::real)>0.9;
+
+-- Комментарий:
+-- Неверно! Нужно отобрать эмитентов, ВСЕ торгуемые облигации которого, активно котируются. 
+>>>>>>> Stashed changes
 
